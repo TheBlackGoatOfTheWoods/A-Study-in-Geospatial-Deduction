@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>A Study in Geospatial Deduction</title>
+		<meta name="author" content="Elisabeth Binder">
+		<meta name="description" content="Sherlock goes Open Source">
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="icon" href="illustrations/pipe1.png">
+		<!--<link rel="stylesheet" href="https://openlayers.org/en/v4.6.5/css/ol.css" type="text/css">	-->
+		<link rel="stylesheet" href="Openlayers_465.css" >
+		<link rel="stylesheet" href="Sherlock.css" >	
+		<script src="https://openlayers.org/en/v4.6.5/build/ol.js"></script>
+		<script src="https://d3js.org/d3.v5.js"></script>
+		<script src="https://d3js.org/d3-path.v1.min.js"></script>		
+		<script src="https://api.mapbox.com/mapbox.js/plugins/arc.js/v0.1.0/arc.js"></script>
+		<script src="Sherlock.js" type="text/javascript"></script>
+		<script src="Sherlock_styles.js" type="text/javascript"></script>
+		<script src="Sherlock_layers.js" type="text/javascript"></script>
+		<script src="Sherlock_viewpoints.js" type="text/javascript"></script>
+		<script src="Sherlock_initialise.js" type="text/javascript"></script>
+		<script src="Sherlock_charts.js" type="text/javascript"></script>
+		<script src="Sherlock_API.js" type="text/javascript"></script>
+		<script src="Sherlock_webpage.js" type="text/javascript"></script>
+		<script src="StoryInformation.js" type="text/javascript"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.4.4/proj4.js"></script>
+		<script src="https://epsg.io/27700.js"></script>
+		
+    <script src="https://epsg.io/21781-1753.js"></script>
+
+	</head>
+	<body onload="initialise();getStories();getCountries();getLocationRoles();loadWebPage();">
+		<!-- maptips are at beginning of body for positioning! -->
+		<div id="extentmaptip" class="maptip">Show me how!</div>
+		<div id="geommaptip" class="maptip">Polygon features may require long loading times!</div>
+		<div id="realitymaptip" class="maptip">More information on reality attribute.</div>
+		<div id="storyloctypemaptip" class="maptip">More information on type attribute.</div>
+		<div id="measuremaptip" class="maptip">Select the first point.</div>
+		<div id="chartmaptip" class="maptip"></div>
+		<!-- maptips are at beginning of body for positioning! -->
+		
+		<div id="header">
+			<img id="infopipe" src="icons/info.png">
+			<p id="maintitle">A Study in Geospatial Deduction</p>
+			<p id="mainsubtitle">A comprehensive spatial compendium of Sir Arthur Conan Doyle's Sherlock Holmes stories</p>
+		</div><!--header-->
+		
+		<div id="toggle" class="toggle">
+			<div id="arrow"><img id="arrowimage" src="icons/in.png"></div>
+		</div><!--toggle-->
+		
+		<div id="map" class="map">	
+			<div class="loader" id="loader"></div>
+			<button id="zoomin" type="button" class="button mapcontrol" onclick="zoom('in');">
+				<img src="icons/plus.png"></button>
+			<button id="zoomout" type="button" class="button mapcontrol" onclick="zoom('out');">
+				<img src="icons/minus.png"></button>
+			<div id="scalelinediv"></div>
+			<div id="attributiondiv"></div>
+		</div><!--map-->
+		
+		<div id="chartdiv" class="text">
+			<svg id="chart" class="sidepanel"></svg>
+			<div id="info" class="sidepanel">
+				<img src="icons/close.png" id="infocloser">
+				<p class="title">About this page</p>
+				<p class="description">This application is an interactive platform to explore the locations of selected Sherlock Holmes stories.
+				This prototype for exploring spatial aspects in fictional literature was realised as a Master's project.</p>
+				<p class="subtitle">How to use it</p>
+				<p class="description">
+					<img src="illustrations/pipe1.png" style="height: 2vmin">First, select subset from the <b>Selection</b> menu. You can change the basemap or add administrative boundary layers as reference.</br> 
+				</p>
+				<p class="description">
+					<img src="illustrations/pipe1.png" style="height: 2vmin">In the <b>Styling</b> section you can find out more about the locations by changing their appearance according to specific properties.</br> 
+				</p>
+				<p class="description">
+					<img src="illustrations/pipe1.png" style="height: 2vmin">Explore the spatial properties of the locations you selected in the <b>Analysis</b> tab.</br> 
+				</p>	
+				<p class="description">
+					<img src="illustrations/pipe1.png" style="height: 2vmin">In the <b>Animation</b> section you can watch an animated sequence of the locations as if you were reading the text.</br> 
+				</p>
+				<p class="description" style="max-width: 50%">	
+					<img src="illustrations/pipe1.png" style="height: 2vmin">Not least, in the <b>Charts</b> menu you can visualise the characteristics of the dataset in the form of bar charts and a co-occurrence matrix.</br> 
+				</p>
+				<img src="illustrations/sherlock_upright4.png" id="sherlock">
+			</div><!--info-->
+			<div id="metainfo" class="sidepanel">
+				<p class="subtitle" id="storytitle">The story</p>
+				<p class="description" id="storydescription"></p>
+				<p class="description"><a id="storylink" target="_blank"></a></p>
+				<p class="subtitle" id="countrytitle"></p>
+				<p class="subtitle" id="realitytitle"></p>
+				<p class="description" id="realitydescription"></p>
+				<p class="subtitle" id="typetitle"></p>
+				<p class="description" id="typedescription"></p>
+				<p class="subtitle" id="charactertitle"></p>
+				<p class="description" id="characterdescription"></p>
+				<a id="storyimagelink"><img id="storyimage"></a>
+			</div><!--metainfo-->
+			<div id="measureresults" class="sidepanel">
+				<p class="title">Results</p>
+				<p class="subtitle">Distance between the two chosen locations</p>
+				<table class="controltable">
+					<tr>
+						<td style="width:50%;">From:</td>
+						<td style="width:50%;" id="fromloc"></td>
+					</tr>
+					<tr>
+						<td style="width:50%;">To:</td>
+						<td style="width:50%;" id="toloc"></td>
+					</tr>
+					<tr>
+						<td style="width:50%;">Result:</td>
+						<td style="width:50%;" id="distres"></td>
+					</tr>
+				</table>
+				<p class="subtitle">Distances in the selected dataset</p>
+				<table class="controltable">
+					<tr>
+						<td style="width:50%;">Minimum distance:</td>
+						<td id="mindist"></td>
+					</tr>
+					<tr>
+						<td style="width:50%;">Maximum distance:</td>
+						<td id="maxdist"></td>
+					</tr>
+					<tr>
+						<td style="width:50%;">Mean distance:</td>
+						<td id="meandist"></td>
+					</tr>
+					<tr>
+						<td style="width:50%;">Median distance:</td>
+						<td id="meddist"></td>
+					</tr>
+				</table>
+				<p class="subtitle">Boxplot representation of distances</p>
+				<p class="description">The boxplot below illustrates how distances between locations are distributed within the 
+					currently selected dataset. The green line represents the median distance. 
+					The purple dot indicates the result of the current distance calculation.</p>
+				<svg id="measurechart"></svg>
+			</div><!--measureresults-->
+		</div><!--chartdiv-->
+		
+		<div id="control" class="text">
+			
+			<div id="toggle2"><!--class="toggle"-->
+				<div id="controlcontenttab" class="tab"><div class="tabtext">Selection</div></div>
+				<div id="layercontroltab" class="tab"><div class="tabtext">Layers</div></div>
+				<div id="styletab" class="tab"><div class="tabtext">Styling</div></div>
+				<div id="analysetab" class="tab"><div class="tabtext">Analysis</div></div>
+				<div id="animationtab" class="tab"><div class="tabtext">Animation</div></div>
+				<div id="chartstab" class="tab"><div class="tabtext">Charts</div></div>
+			</div><!--toggle2-->
+			
+			<div id="controlcontent" class="content">
+				<p id="controltitle" class="title">Feature Selection</p>
+				<p class="subtitle">Filter by Attributes</p>
+				<p class="description">Select one or more attribute to by which the map features will be filtered.</p>
+				<table id="selectiontable" class="controltable">
+					<tr>
+						<td class="columnleft">Story</td>
+						<td class="columnmiddle"><select id="strydrpdwn" class="dropdown"></select></td>
+						<!--<td class="columnright"><input id="strychckbox" type="checkbox" class="drpcheckbox"></td>-->
+					</tr>
+					<tr>
+						<td class="columnleft">Country</td>
+						<td class="columnmiddle"><select id="cntrydrpdwn" class="dropdown"></select></td>
+						<!--<td class="columnright"><input id="cntrychckbox" type="checkbox" class="drpcheckbox"></td>-->
+					</tr>
+					<tr>
+						<td class="columnleft">Reality <img src="icons/info.png" id="realityicon" class="infoicon"></td>
+						<td class="columnmiddle"><select id="rltydrpdwn" class="dropdown">
+							<option value="*" selected> all </option>
+							<option value="real"> real </option>
+							<option value="fictional"> fictional </option>
+							</select></td>
+						<!--<td class="columnright"><input id="rltychckbox" type="checkbox" class="drpcheckbox"></td>-->
+					</tr>
+					<tr>
+						<td class="columnleft">Type <img src="icons/info.png" id="storyloctypeicon" class="infoicon"></td>
+						<td class="columnmiddle"><select id="typdrpdwn" class="dropdown"></select></td>
+						<!--<td class="columnright"><input id="typchckbox" type="checkbox" class="drpcheckbox"></td>-->
+					</tr>	
+					<!--<tr>
+						<td class="columnleft">Character</td>
+						<td class="columnmiddle"><select id="chrctrdrpdwn" class="dropdown"></select></td>
+						<td class="columnright"><input id="chrctrchckbox" type="checkbox" class="drpcheckbox"></td>
+					</tr>-->
+				</table>
+				<!--<p class="buttondiv">
+					<button type="button" class="button aftertable" onclick="clearAllDropdowns();"> Reset all </button>
+				</p>-->
+				<p class="subtitle">Filter by Extent</p>
+				<p class="description">Draw an extent on the map by holding Shift and dragging the cursor over the map.
+					<img src="icons/info.png" id="extenticon" class="infoicon" alt="Show me how">
+					<img id="showmeextentgif" src="illustrations/showmeextent.gif" alt="showmeextent">
+				</p>
+				<p class="subtitle">Filter by Geometry Type</p>
+				<p class="description">Select one or more geometry types to include in the feature request.
+					<img src="icons/attention2.png" id="geomicon" class="infoicon">
+				</p>
+				<div id="selectgeomtype" class="contentpcontrol">
+					<input type="checkbox" name="onlypoints" id="pointscheckbox" value="true"  class="checkbox" checked>point features<br>
+					<input type="checkbox" name="onlypolys" id="polyscheckbox" value="true"  class="checkbox">polygon features<br>
+					<input type="checkbox" name="onlylines" id="linescheckbox" value="true"  class="checkbox">line features<br>
+				</div>
+				<div id="controls" class="buttondiv afterpcontrol">
+					<button id="filterbutton" type="button" class="button" onclick="filter();"> Get result </button>
+				</div><!--controls-->
+			</div><!--controlcontent-->
+			<div id="layercontrol" class="content">
+				<p id="layercontroltitle" class="title">Layer Selection</p>
+				<p class="subtitle">Select a basemap</p>
+				<p class="description">Use the layer switcher to switch between basemaps.</p>
+				<p class="contentpcontrol">
+					<input type="radio" name="basemap" value="OSM" onclick="switchBasemap('OSM');">OpenStreetMap<br>
+					<input type="radio" name="basemap" value="terrain" onclick="switchBasemap('terrain');" checked>Stamen Terrain<br>
+				</p>
+				<p class="subtitle">Load administrative boundaries</p>
+				<p class="description">Choose a layer from the layer switcher below to load administrative boundaries from a 
+					designated Web Feature Service into the map. These can be used to assess spatial frequency statistics in the Analysis tab.	
+					<img src="icons/bulb1.png" id="boundicon" class="infoicon" alt="Show me how"></p>
+				<table class="controltable">
+					<td>
+						<input type="checkbox" class ="layercheckbox" id="londoncheck" value="London" onclick="displayBoundaries(2);">London<br>
+						<input type="checkbox" class ="layercheckbox" id="englandcheck" value="England" onclick="displayBoundaries(1);">England<br>
+						<input type="checkbox" class ="layercheckbox" id="walescheck" value="Wales" onclick="displayBoundaries(4);">Wales<br>
+						<input type="checkbox" class ="layercheckbox" id="scotlandcheck" value="Scotland" onclick="displayBoundaries(3);">Scotland<br>
+					</td>
+					<td>
+						<input type="checkbox" class ="layercheckbox" id="uscheck" value="USA" onclick="displayBoundaries(5);">USA states<br>
+						<input type="checkbox" class ="layercheckbox" id="worldcheck" value="world" onclick="displayBoundaries(6);">World countries<br>
+					</td>
+				</table>
+				<p id="removeboundariesdiv" class="buttondiv">
+					<button id="removeBoundaries" type="button" class="button" onclick="removeLayer();">Remove all</button>
+				</p>
+			</div><!--layercontrol-->
+			<div id="style" class="content">
+				<p class="title">Feature Styling</p>
+				<p class="subtitle">Style the map features</p>
+				<p class="description">Choose one or more attributes for styling the map features.</p>
+				<p id="styleboxp" class="contentpcontrol">
+					<input type="checkbox" name="styleatt" id="certaintystyle" class="stylebox" value="certainty" onclick="setStyle(1);">Certainty<br>
+					<input type="checkbox" name="styleatt" id="realitystyle" class="stylebox" value="reality" onclick="setStyle(2);">Reality<br>
+					<input type="checkbox" name="styleatt" id="accuracystyle" class="stylebox" value="accuracy" onclick="setStyle(3);">Accuracy<br>
+					<input type="checkbox" name="styleatt" id="typestyle" class="stylebox" value="type" onclick="setStyle(4);">Locationtype<br>
+				</p>
+				<p id="resetstylediv" class="buttondiv">
+					<button id="resetstyle" type="button" class="button" onclick="setStyle('default')";>Reset</button>
+				</p>
+				<p class="subtitle">Legend</p>
+				<table class="controltable">
+					<tr>
+						<td class="subhead" colspan="4">Reality</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/opaq.png"></td>
+						<td class="legendmiddle"colspan="3">real</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/seethru.png"></td>
+						<td class="legendmiddle"colspan="3">fictional</td>
+					</tr>
+					<tr>
+						<td class="subhead" colspan="4">Certainty</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/green.png"></td>
+						<td class="legendmiddle"colspan="3">good</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/orange.png"></td>
+						<td class="legendmiddle"colspan="3">medium</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/red.png"></td>
+						<td class="legendmiddle"colspan="3">poor</td>
+					</tr>
+					<tr>
+						<td class="subhead" colspan="4">Accuracy</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/small.png"></td>
+						<td class="legendmiddle"colspan="3">high</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/medium.png"></td>
+						<td class="legendmiddle"colspan="3">medium</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/opaq.png"></td>
+						<td class="legendmiddle" colspan="3">low</td>
+					</tr>
+					<tr>
+						<td class="subhead" colspan="4">Locationtype</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/tri.png"></td>
+						<td class="legendiconline"><img src="icons/actiondash.png"></td>
+						<td class="legendiconmiddle"><img src="icons/cross.png"></td>
+						<td class="">action</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/circ.png"></td>
+						<td class="legendiconline"><img src="icons/backdash.png"></td>
+						<td class="legendiconmiddle"><img src="icons/back.png"></td>
+						<td class="">background story</td>
+					</tr>
+					<tr>
+						<td class="legendleft"><img src="icons/star.png"></td>
+						<td class="legendiconline"><img src="icons/refdash.png"></td>
+						<td class="legendiconmiddle"><img src="icons/ref.png"></td>
+						<td class="">reference</td>
+					</tr>
+				</table>
+			</div>
+			<div id="analyse" class="content">
+				<p id="analysecontroltitle" class="title">Analysis</p>
+				<p class="subtitle">Exploratory Spatial Analysis</p>
+				<p class="description">Create a visual representation of the selected features' spatial footprint by calculating the Convex Hull.</p>
+				<table class="controltable">
+					<td>
+						<button id="processbutton" type="button" class="button" onclick="newConvexHull(features);"> Calculate </button>
+					</td>
+					<td><input type="checkbox" id="convexhullcheckbox">Convex Hull layer</td>
+				</table>
+				<p class="description">Get the geographical center of the selected features</p>
+				<table class="controltable">
+					<td>
+						<button id="processbutton" type="button" class="button" onclick="getMeanCenter();"> Calculate </button>
+					</td>
+					<td><input type="checkbox" id="meancentercheckbox">Mean center layer</td>
+				</table>
+				<p class="subtitle">Calculate distances</p>
+				<p class="description">Select two locations from the map and measure the distance between them.</p>
+				<table class="controltable">
+					<td>
+						<button id="startmeasure" type="button" class="button" onclick="beginMeasure();"> Calculate </button>
+					</td>
+					<td><input type="checkbox" id="distancecheckbox">Distance layer</td>
+				</table>
+				<p class="subtitle">Spatial frequency assessment</p>
+				<p class="description">After loading a boundary layer, assess the frequency of features within each of the boundary features.</p>
+				<table class="controltable">
+					<td>
+						<button id="testbutton2" type="button" class="button" onclick="countBy();"> Calculate </button>
+					</td>
+					<td>
+						<input type="checkbox" id="statlayercheckbox">Statistics layer<br>
+						<input type="checkbox" id="featurelayercheckbox">Feature layer<br>
+					</td>
+				</table>
+			</div>
+			<div id="animation" class="content">
+				<p id="animationcontroltitle" class="title">Feature Animation</p>
+				<p class="subtitle">Let the map tell you a story</p>
+				<p class="description">Start a map animation based on your selection. Use the slider to control animation speed and the
+					control buttons to start, stop, pause, go one step ahead or one step back.
+					<img src="icons/bulb1.png" id="animicon" class="infoicon" alt="Show me how"></p>
+				<!--<table class="controltable">
+					<td class="columnleft">high</td>
+					<td class="columnmiddle">
+						<input id="animationspeed" type="range" class="slider" value="3000" min="-500" max="8000">
+					</td>
+					<td class="columnright">low</td>
+				</table>-->
+				<div id="outersliderdiv" class="contentpcontrol">sdsd
+					<div id="sliderdiv">
+					</div>
+						<div id="lowdiv" class="slidertick"></div>
+						<div id="lowdivgroove" class="slidergroove"></div>
+						<div id="midlowdiv" class="slidertick"></div>
+						<div id="midlowdivgroove" class="slidergroove"></div>
+						<div id="mediumdiv" class="slidertick"></div>
+						<div id="mediumdivgroove" class="slidergroove"></div>
+						<div id="highdiv" class="slidertick"></div>
+						<div id="midhighdivgroove" class="slidergroove"></div>
+						<div id="midhighdiv" class="slidertick"></div>
+						<div id="highdivgroove" class="slidergroove"></div>
+						<div id="slidetick" class="slidertick"></div>
+				</div>
+				<table class="controltable">
+					<tr>
+						<td width="20%" style="text-align:center">low</td>
+						<td width="20%" style="text-align:center"></td>
+						<td width="20%" style="text-align:center">medium</td>
+						<td width="20%" style="text-align:center"></td>
+						<td width="20%" style="text-align:center">high</td>
+					</tr>
+				</table>
+				<div id="animationcontrol" class="buttondiv afterpcontrol">
+					<button id="backbutton" type="button" class="button animation" onclick="animateFeatures(false, true);">
+						<img src="icons/backward.png"></button>
+					<button id="startbutton" type="button" class="button animation" onclick="animateFeatures(false, false);">
+						<img src="icons/start.png"></button>
+					<button id="forwardbutton" type="button" class="button animation" onclick="animateFeatures(true, false);">
+						<img src="icons/forward.png"></button>
+					<button id="pausebutton" type="button" class="button animation" onclick="stopAnimation(true)">
+						<img src="icons/pause.png"></button>
+					<button id="stopbutton" type="button" class="button animation" onclick="stopAnimation(false)">
+						<img src="icons/stop.png"></button>
+				</div>
+			</div>
+			<div id="charts" class="content">
+				<p id="chartcontroltitle" class="title">Charts</p>
+				<p class="subtitle">Frequency statistics</p>
+				<p class="description">Choose one attribute from below and display the frequencies in a bar chart.	
+					<img src="icons/bulb1.png" id="barchicon" class="infoicon" alt="Show me how"> 
+				</p>
+				<p class="contentpcontrol">
+					<select id="chartdropdown">
+						<option value=2>Story</option>
+						<option value=4>Location role</option>
+						<option value=7>Country</option>
+						<option value=8>Scale</option>
+						<option value=9>Reality</option>
+						<option value=10>Certainty</option>
+						<option value=11>Accuracy</option>
+						<option value=17>Character</option>
+					</select>
+				</p>
+				<div class="buttondiv">
+					<button id="chartbutton" type="button" class="button" onclick="createChart(filterresults);"> Bar Chart </button>
+				</div>
+				<p class="subtitle">Co-occurrences</p>
+				<p class="description">Choose two attributes from below and assess the frequency of co-occurencies.
+					<img src="icons/bulb1.png" id="cooccicon" class="infoicon" alt="Show me how"> 
+				</p>
+				<table class="controltable">
+					<tr>
+						<td>Attribute on x-Axis</td>
+						<td>Attribute on y-Axis</td>
+					</tr>
+					<tr>
+						<td>
+							<select id="chartdropdownx">
+								<option value=2>Story</option>
+								<option value=4>Location role</option>
+								<option value=7>Country</option>
+								<option value=8>Scale</option>
+								<option value=9>Reality</option>
+								<option value=10>Certainty</option>
+								<option value=11>Accuracy</option>
+								<option value=17>Character</option>
+							</select>
+						</td>
+						<td>
+							<select id="chartdropdowny">
+								<option value=2>Story</option>
+								<option value=4>Location role</option>
+								<option value=7>Country</option>
+								<option value=8>Scale</option>
+								<option value=9>Reality</option>
+								<option value=10>Certainty</option>
+								<option value=11>Accuracy</option>
+								<option value=17>Character</option>
+							</select>
+						</td>
+					</tr>
+				</table>
+				<div class="buttondiv  afterpcontrol">
+					<button id ="chartbutton2" type="button" class="button" onclick="parseCoJSON(filterresults);">CoMa</button>
+				</div>
+			</div>
+		</div><!--popup-->
+			<div id="popup" class="popup">
+				<div id="popup-content" class="popup-content"></div>
+			</div>
+		</div><!--content-->
+		<div id="footer" class="text">
+			<div class="footerbuttondiv">
+				<div id="mapcontrol">
+					ZOOM:
+					<span id="zoomToSelected" class="footerlink" onclick="zoomTo('selected');">zoom to selection</span>
+					<!--<button onclick="getExtent()">get Extent</button>-->
+					<span id="zoomToLondon" class="footerlink" onclick="zoomTo('London');">London</span>
+					<span id="zoomToDart" class="footerlink" onclick="zoomTo('dart');">Dartmoor</span>
+					<span id="zoomToUK"  class="footerlink" onclick="zoomTo('UK');">UK</span>
+					<span id="zoomToUS" class="footerlink" onclick="zoomTo('US');">USA</span>
+					<span id="zoomToIndia" class="footerlink" onclick="zoomTo('India');">India</span>
+					<span id="zoomToEurope" class="footerlink" onclick="zoomTo('Europe');">Europe</span>
+				</div>
+				<div id="featurescount">0 features added to the map.</div>
+				<div id="resetdiv">
+					<button id="reset" type="button" class="button footer" onclick="location.reload();">Reset all</button>
+				</div>
+			</div>
+		<!--<div><a href="http://www.elisabeth-binder.at" target="_blank">Elisabeth Binder</a>, 2018</div>-->
+		</div>
+	</body>
+</html>
